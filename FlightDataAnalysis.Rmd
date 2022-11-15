@@ -1,0 +1,285 @@
+---
+title: "Coursework"
+output: html_document
+date: '2022-03-11'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing the datasets
+
+dataset1 <- read.csv("C:/Users/HP/OneDrive/Documents/Programming Coursework/datasets/2006.csv")
+dataset2 <- read.csv("C:/Users/HP/OneDrive/Documents/Programming Coursework/datasets/2007.csv")
+main_dataset <- rbind(dataset1, dataset2)
+
+## explore names 
+
+head(main_dataset)
+colnames(main_dataset)
+colSums(is.na(main_dataset))
+
+
+
+## data cleaning
+
+names(main_dataset) [names(main_dataset) == 'DayOfMonth'] <- 'Day'
+
+main_dataset <- na.omit(main_dataset) 
+
+
+
+## Question 1 
+
+
+library("ggplot2")
+library("dplyr")
+
+
+##Best Time of Day
+main_dataset$CRSDepTime <- as.character(main_dataset$CRSDepTime)
+
+Hours <- data.frame(substring(main_dataset$CRSDepTime, 0, nchar(main_dataset$CRSDepTime)-2))
+
+Hours[1][Hours[1] == ""] <- "0"
+
+main_dataset$CRSDepTime <- Hours
+
+main_dataset[,1] <- main_dataset[,1][[1]]
+
+bar_data <- ggplot(data=main_dataset, aes(x=main_dataset[,6], y=DepDelay)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean") + 
+  labs(title="Average Departure Delays by Hour of Day", x="Hours of Day", y="Average Departure Delay")
+bar_data
+
+head(main_dataset) 
+
+
+
+
+bar_data <- ggplot(data=main_dataset, aes(x=CRSDepTime, y=DepDelay)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean") + 
+  labs(title="Average Departure Delays by Time of Day", x="Scheduled Departure Time", y="Average Departure Delays")
+bar_data
+
+
+##Best Day of Week
+main_dataset$DayOfWeek <- recode(main_dataset$DayOfWeek,
+                             "1"= 'Monday',
+                             "2"= 'Tuesday',
+                             "3"= 'Wednesday',
+                             "4"= 'Thursday',
+                             "5"= 'Friday',
+                             "6"= 'Saturday',
+                             "7"= 'Sunday')
+
+bar_data1 <-ggplot(data=main_dataset, aes(x=DayOfWeek, y=ArrDelay)) +
+  geom_bar(position = "dodge", stat = "summary", fill = "red", fun = "mean") + 
+  labs(title="Average Arrival Delays by Day of Week", x="Day Of Week", y="Average Arrival Delays") +
+  scale_x_discrete(limits = c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'))
+bar_data1
+
+
+##Best Time of Year
+bar_data2 <- ggplot(data=main_dataset, aes(x=Month, y=ArrDelay)) +
+  geom_bar(position = "dodge", stat = "summary", fill = "green", fun = "mean") +
+  scale_x_continuous(breaks=seq(1,12, by = 1)) +
+  labs(title = "Average Arrival Delays by Month", x = "Month", y = "Average Arrival Delays")
+bar_data2
+
+
+## Question 2
+
+dataset3 <- read.csv("C:/Users/HP/OneDrive/Documents/Programming Coursework/datasets/plane-data.csv")
+
+colSums(is.na(dataset3))
+names(dataset3) [names(dataset3) == 'tailnum'] <- 'TailNum'
+names(dataset3) [names(dataset3) == 'issue_date'] <- 'Plane Issue Date'
+names(dataset3) [names(dataset3) == 'year'] <- 'Plane Manufacture Year'
+colnames(dataset3)
+
+
+sample_main_dataset <- sample_n (main_dataset, 5000000)
+
+
+#Removing blank rows 
+colnames(dataset3)
+
+dataset3$TailNum <- ifelse(dataset3$TailNum == "", yes = NA, no = dataset3$TailNum)
+dataset3$type <- ifelse(dataset3$type == "", yes = NA, no = dataset3$type)
+dataset3$manufacturer <- ifelse(dataset3$manufacturer == "", yes = NA, no = dataset3$manufacturer)
+dataset3$`Plane Issue Date`<- ifelse(dataset3$`Plane Issue Date` == "", yes = NA, no = dataset3$`Plane Issue Date`)
+dataset3$model <- ifelse(dataset3$model == "", yes = NA, no = dataset3$model)
+dataset3$status <- ifelse(dataset3$status == "", yes = NA, no = dataset3$status)
+dataset3$aircraft_type <- ifelse(dataset3$aircraft_type == "", yes = NA, no = dataset3$aircraft_type)
+dataset3$engine_type <- ifelse(dataset3$engine_type == "", yes = NA, no = dataset3$engine_type)
+dataset3$`Plane Manufacture Year` <- ifelse(dataset3$`Plane Manufacture Year` == "", yes = NA, no = dataset3$`Plane Manufacture Year`)
+
+#Removing NA rows from dataset3
+complete_rows<-complete.cases(dataset3)
+dataset3_cleaned<-subset(dataset3,complete_rows)
+
+dataset3_subset <- subset(dataset3_cleaned, select = c("TailNum", "Plane Issue Date", "Plane Manufacture Year"))
+
+df <- merge(sample_main_dataset, dataset3_subset, by = "TailNum")
+head(df)
+
+names(df) [names(df) == 'Plane Manufacture Year'] <- 'Plane_Manufacture_Year'
+
+df2 <- subset(df, df$DepDelay > 0 & df$ArrDelay > 0)
+
+df2["TotalDelay"] <- df2$DepDelay + df2$ArrDelay
+
+
+#Plotting scatter plots
+bar_data3 <- ggplot(data=df2, aes(x=Plane_Manufacture_Year, y=DepDelay)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean") +
+  labs(title = "Plane Manufacture Year vs. Departure Delay", x = "Plane Manufacture Year", y = "Average Departure Delay")
+bar_data3
+
+
+scatter_data <- ggplot(data = df2, aes(x=Plane_Manufacture_Year, y=DepDelay)) + 
+                geom_point(stat = "summary", fun = "mean", colour = "blue") +
+                labs(title = "Plane Manufacture Year vs. Departure Delay", x = "Plane Manufacture Year", y = "Average Departure Delay")                       
+scatter_data   
+
+scatter_data2 <- ggplot(data=df2, aes(x=Plane_Manufacture_Year, y=TotalDelay)) +
+                 geom_point(stat = "summary", fun = "mean", colour = "green") +
+                 labs(title = "Plane Manufacture Year vs. Total Delay", x = "Plane Manufacture Year", y = "Average Total Delay")
+scatter_data2
+ 
+
+
+## Question 3
+
+bar_data4 <- ggplot(dataset1, aes(Month)) +
+  geom_bar(fill = "blue") +
+  scale_x_continuous(breaks=seq(1,12, by = 1)) +
+  labs(title = "Number of Flights per Month in 2006", x = "Month", y = "Number of Flights")
+bar_data4
+
+bar_data5 <- ggplot(dataset2, aes(Month)) +
+  geom_bar(fill = "orange") +
+  scale_x_continuous(breaks=seq(1,12, by = 1)) +
+  labs(title = "Number of Flights per Month in 2007", x = "Month", y = "Number of Flights")
+bar_data5
+
+ 
+
+
+line_data <- dataset1 %>% group_by(Year, Month) %>% summarise(count_FlightNum = n())
+line_data    
+
+line_data2 <- dataset2 %>% group_by(Year, Month) %>% summarise(count_FlightNum = n())
+line_data2
+  
+lineplot = ggplot() +
+        geom_line (data = line_data, aes  (x = Month, y = count_FlightNum, colour = "2006" )) +
+        geom_line (data = line_data2, aes (x = Month, y = count_FlightNum, colour = "2007")) +
+        geom_point(data = line_data, aes (x = Month, y = count_FlightNum, colour = "2006")) +
+        geom_point(data = line_data2, aes (x = Month, y = count_FlightNum, colour = "2007")) +
+        scale_x_continuous(breaks=seq(1,12, by = 1)) +
+        xlab("Month") +
+        ylab("Number of Flights") +
+        ggtitle("Number of Flights per Month in 2006 and 2007")
+lineplot
+
+main_dataset$Month <- recode(main_dataset$Month,
+                      "12"= 'Winter',
+                      "1" = 'Winter',
+                      "2" = 'Winter',
+                      "3" = 'Spring',
+                      "4" = 'Spring',
+                      "5" = 'Spring',
+                      "6" = 'Summer',
+                      "7" = 'Summer',
+                      "8" = 'Summer',
+                      "9" = 'Autumn',
+                      "10"= 'Autumn',
+                      "11"= 'Autumn')
+                      
+bar_data8 <-ggplot(main_dataset, aes(Month)) +
+  geom_bar(fill = "lightpink") + 
+  scale_x_discrete(limits = c('Spring', 'Summer', 'Autumn', 'Winter')) +
+  labs(title="Number of Flights per Season", x="Season", y="Number of Flights") 
+bar_data8  
+  
+
+## Question 4
+
+main_dataset$CRSDepTime <- as.character(main_dataset$CRSDepTime)
+
+Minutes <- data.frame(substring(main_dataset$CRSDepTime, nchar(main_dataset$CRSDepTime)-2, 0))
+
+main_dataset["TotalDelay"] <- main_dataset$DepDelay + main_dataset$ArrDelay
+
+main_dataset["PreviousDelay"] <- main_dataset %>% group_by(TailNum, DateTimeCRSDepTime) %>% shift.columns (data = main_dataset, columns = "TotalDelay", len = 1, up = TRUE)
+
+## Question 5
+
+
+library("mlr3")
+library("mlr3learners")
+library("mlr3pipelines")
+library("mlr3viz")
+
+df3 <- sample_n (df, 300000)
+
+ml_data <- df3[,c('Distance', 'Year', 'Month', 'DayOfWeek', 'CRSDepTime', 'Origin', 'Dest', 'Plane_Manufacture_Year', 'DepDelay')]
+numerical_data <- c('Distance', 'CRSDepTime', 'DepDelay')
+categorical_data <- c('Year', 'Month', 'DayOfWeek', 'Origin', 'Dest', 'Plane_Manufacture_Year')
+
+for(column in categorical_data) {
+  ml_data[,column] <- as.factor(ml_data[[column]])
+}
+rm(column)
+
+df3$DepDelay <- as.factor(df3$DepDelay)
+
+task <- TaskClassif$new('Delay', backend = ml_data, target = 'DepDelay', positive = "1")
+measure <- msr('classif.auc')
+
+learner_logreg <- lrn('classif.log_reg', predict_type = "prob")
+
+# Pipeline setup
+
+
+# Identify missing data
+mp_missind <- po("missind", affect_columns = NULL, which = "all") # identifying missing data
+
+# Imputing missing numerical features and scale
+impute_num <- po("imputemean", affect_columns = selector_type("numeric")) # imputes means to numeric columns
+scale_data <- po("scale", affect_columns = selector_type("numeric"))
+
+# Imputing missing categorical features and one hot encode
+impute_fct = po("imputeoor", affect_columns = selector_type("factor"))
+ohencode = po("encode", affect_columns = selector_type("factor"))
+
+
+# Build pipeline
+gr_ridge = gunion(list(mp_missind, impute_num %>>% impute_fct)) %>>%
+                 po("featureunion") %>>%
+                 scale_data %>>%
+                 ohencode %>>%
+                  po(learner_logreg)
+                  
+graph <- GraphLearner$new(gr_ridge)
+
+
+# Evaluate model
+set.seed(1)
+train_set <- sample(task$nrow, 0.7 * task$nrow)
+test_set <- setdiff(seq_len(task$nrow), train_set)
+
+graph$train(task, row_ids = train_set)
+prediction <- graph$predict(task, row_ids = test_set)
+prediction$score(measure)
+
+prediction$confusion
+
+
+#Plotting an ROC curve
+autoplot(prediction, type = "roc")
+
+
